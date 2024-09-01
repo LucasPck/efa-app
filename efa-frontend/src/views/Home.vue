@@ -145,6 +145,8 @@ function handleSubmitTournament() {
 async function addTeamToTournament() {
   if (!selectedTournament.value || !teamToAdd.value) return;
 
+  console.log(teamsInTournament.value.teams)
+
   try {
     const response = await fetch(`http://localhost:3000/tournament/${selectedTournament.value.id}/addTeam`, {
       method: 'POST',
@@ -218,93 +220,111 @@ async function updateMatchResult(matchId: string, winnerId: string) {
 </script>
 
 <template>
-  <section>
-    <h2>Créer une équipe</h2>
-    <form @submit.prevent="handleSubmitTeam">
-      <input type="text" placeholder="Nom de l'équipe" v-model="teamName">
-      <input type="text"  placeholder="Toplaner" v-model="toplaner">
-      <input type="text" placeholder="Jungler" v-model="jungler">
-      <input type="text" placeholder="Midlaner" v-model="midlaner">
-      <input type="text" placeholder="Botlaner" v-model="botlaner">
-      <input type="text" placeholder="Support" v-model="support">
-      <button type="submit">Créer</button>
-    </form>
-  </section>
+  <div class="min-h-screen bg-my-black p-8">
+    <div class="max-w-6xl mx-auto">
+      <h1 class="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-my-pink-400 to-my-yellow-400 text-transparent bg-clip-text">
+        Dashboard Tournois
+      </h1>
 
-  <section>
-    <h2>Créer un tournois</h2>
-    <form @submit.prevent="handleSubmitTournament">
-      <input type="text" placeholder="Nom du tournois" v-model="tournamentName">
-      <select v-model="number">
-        <option>4</option>
-        <option>8</option>
-        <option>16</option>
-      </select>
-      <select v-model="mode">
-        <option disabled value="">Veuillez selectionner un mode</option>
-        <option>BO1</option>
-        <option>BO3</option>
-        <option>BO5</option>
-      </select>
-      <input v-model="team" placeholder="Rentrer le code équipe">
-      <button type="submit">Créer</button>
-    </form>
-  </section>
-
-  <section>
-    <h2>Tournois</h2>
-    <div>
-      <select v-model="selectedTournament">
-        <option :value="null">Sélectionnez un tournoi</option>
-        <option v-for="tournament in userTournaments" :key="tournament.id" :value="tournament">
-          {{ tournament.name }}
-        </option>
-      </select>
-      <p v-if="userTournaments.length === 0">Aucun tournoi disponible</p>
-      <form @submit.prevent="addTeamToTournament" v-if="selectedTournament">
-        <input v-model="teamToAdd" type="text" placeholder="Rentrer le code d'équipe">
-        <button type="submit">Inscrire</button>
-      </form>
-      <div>
-        <h3>Équipes inscrites :</h3>
-        <ul v-if="teamsInTournament.length > 0">
-          <li v-for="team in teamsInTournament" :key="team.teamId">
-            {{ team.team?.name || 'Nom d\'équipe inconnu' }}
-          </li>
-        </ul>
-        <p v-else>Aucune équipe inscrite pour le moment</p>
-      </div>
-    </div>
-    <div v-if="selectedTournament && selectedTournament.stage === 'NOT_STARTED'">
-      <button @click="startTournament">Démarrer le tournoi</button>
-    </div>
-    <div v-if="selectedTournament && selectedTournament.stage === 'IN_PROGRESS'">
-      <h3>Matchs du tournoi</h3>
-      <div v-for="match in tournamentMatches" :key="match.id">
-        <h4>{{ match.stage }} - Match {{ match.id }}</h4>
-        <div :style="{ backgroundColor: match.winner === match.team1Id ? 'aqua' : 'white' }">
-          <p>{{ match.team1.name }}</p>
-          <button v-if="!match.winner" @click="updateMatchResult(match.id, match.team1Id)">
-            Déclarer vainqueur
-          </button>
-          <p v-if="match.winner === match.team1Id">Vainqueur</p>
-          <p v-else-if="match.winner && match.winner !== match.team1Id">Perdant</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="bg-my-grey-800 rounded-lg shadow-lg p-6">
+          <h2 class="text-2xl font-semibold text-my-white mb-4">Créer une équipe</h2>
+          <form @submit="handleSubmitTeam">
+            <input
+              type="text"
+              placeholder="Team Name"
+              v-model="teamName"
+              class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded"
+            />
+            <input type="text"  placeholder="Toplaner" v-model="toplaner" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
+            <input type="text" placeholder="Jungler" v-model="jungler" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
+            <input type="text" placeholder="Midlaner" v-model="midlaner" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
+            <input type="text" placeholder="Botlaner" v-model="botlaner" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
+            <input type="text" placeholder="Support" v-model="support" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
+            <button type="submit" class="w-full py-2 px-4 bg-my-blue-400 text-my-black rounded hover:bg-my-my-blue-600 transition">
+              Créer l'équipe
+            </button>
+          </form>
         </div>
-        <div :style="{ backgroundColor: match.winner === match.team2Id ? 'aqua' : 'white' }">
-          <p>{{ match.team2.name }}</p>
-          <button v-if="!match.winner" @click="updateMatchResult(match.id, match.team2Id)">
-            Déclarer vainqueur
-          </button>
-          <p v-if="match.winner === match.team2Id">Vainqueur</p>
-          <p v-else-if="match.winner && match.winner !== match.team2Id">Perdant</p>
+
+        <div class="bg-my-grey-800 rounded-lg shadow-lg p-6">
+          <h2 class="text-2xl font-semibold text-my-white mb-4">
+            Créer un tournois
+          </h2>
+          <form @submit="handleSubmitTournament">
+            <input
+              type="text"
+              placeholder="Tournament Name"
+              v-model="tournamentName"
+              class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded"
+            />
+            <select v-model="number" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
+              <option value="">Select number of teams</option>
+              <option value="4">4</option>
+              <option value="8">8</option>
+              <option value="16">16</option>
+            </select>
+            <select v-model="mode" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
+              <option value="">Select mode</option>
+              <option value="BO1">BO1</option>
+              <option value="BO3">BO3</option>
+              <option value="BO5">BO5</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Team Code"
+              v-model="team"
+              class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded"
+            />
+            <button type="submit" class="w-full py-2 px-4 bg-my-blue-400 text-my-black rounded hover:bg-my-my-blue-600 transition">
+              Créer le tournois
+            </button>
+          </form>
         </div>
       </div>
+
+      <div class="mt-8 bg-my-grey-800 rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-semibold text-my-white mb-4">Tournaments</h2>
+        <select v-model="selectedTournament" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
+          <option value="">Select a tournament</option>
+          <option v-for="tournament in userTournaments" :key="tournament.id" :value="tournament">
+            {{ tournament.name }}
+          </option>
+        </select>
+
+        <div v-if="selectedTournament">
+          <form @submit="addTeamToTournament" class="mb-4">
+            <input
+              type="text"
+              placeholder="Team Code"
+              v-model="teamToAdd"
+              class="w-full p-2 mb-2 bg-my-grey-600 text-my-white rounded"
+            />
+            <button type="submit" class="w-full py-2 px-4 bg-my-yellow-400 text-my-white rounded hover:bg-my-yellow-600 transition">
+              Ajouter une équipe
+            </button>
+          </form>
+          <div>
+            <h3 class="font-bold">Équipes inscrites :</h3>
+            <ul v-if="teamsInTournament.length > 0">
+              <li v-for="team in teamsInTournament" :key="team.teamId">
+                {{ team.team?.name || 'Nom d\'équipe inconnu' }}
+              </li>
+            </ul>
+            <p v-else>Aucune équipe inscrite pour le moment</p>
+          </div>
+
+          <button v-if="selectedTournament.stage === 'IN_PROGRESS'" @click="startTournament" class="w-full py-2 px-4 bg-my-pink-400 text-my-white rounded hover:bg-my-pink-600 transition mb-4">
+            Start Tournament
+          </button>
+
+          <p v-if="selectedTournament.stage === 'FINISHED'" class="text-my-white mb-4">
+            Winner: {{ selectedTournament.winner.name }}
+          </p>
+
+          <!-- Add tournament matches display here -->
+        </div>
+      </div>
     </div>
-    <div v-if="selectedTournament && selectedTournament.stage === 'FINISHED'">
-      <p>Les vainqueurs sont l'équipe {{ selectedTournament.winner.name }}</p>
-    </div>
-    <div v-if="!selectedTournament">
-      Pas de tournois en cours...
-    </div>
-  </section>
+  </div>
 </template>

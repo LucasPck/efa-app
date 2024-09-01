@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import router from '@/router';
 
 interface TeamMember {
   userId: string;
@@ -15,6 +16,10 @@ interface Team {
   name: string;
   users: TeamMember[];
 }
+
+const navigateHome = () => {
+  router.push('/');
+};
 
 const store = useAuthStore();
 
@@ -73,20 +78,41 @@ onMounted(() => {
 </script>
 
 <template>
-  <h1>Équipes</h1>
-  <section>
-    <h2>Mes équipes</h2>
-    <ul>
-      <li v-for="team in teams" :key="team.id" :style="{ backgroundColor: ['#FB37AD', '#FFA320', '#04DCD1', '#A530C5'][teams.indexOf(team) % 4] }">
-        <h3>{{ team.name }}</h3>
-        <ul>
-          <li v-for="member in team.users" :key="member.userId">
-            {{ member.lane }}: {{ member.user.nametag }}
-          </li>
-        </ul>
-        <button @click="copyTeamTag(team)">Code de team</button>
-        <button @click="deleteTeam(team.id)">Supprimer l'équipe</button>
-      </li>
-    </ul>
-  </section>
+  <div class="min-h-screen bg-my-black p-8">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-my-pink-400 to-my-yellow-400 text-transparent bg-clip-text">
+        Team Dashboard
+      </h1>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div v-for="team in teams" :key="team.id" class="bg-my-grey-800 rounded-lg shadow-lg p-6">
+          <h2 class="text-2xl font-bold text-my-white mb-4">{{ team.name }}</h2>
+          <ul class="mb-4">
+            <li v-for="(member, index) in team.users" :key="index" class="text-my-white">
+               {{ member.lane }} : {{ member.user.nametag }}
+            </li>
+          </ul>
+          <div class="flex justify-between">
+            <button
+              @click="copyTeamTag(team)"
+              class="px-4 py-2 bg-my-blue-400 text-my-white rounded hover:bg-my-blue-600 transition"
+            >
+              Copy Team Tag
+            </button>
+            <button
+              @click="deleteTeam(team.id)"
+              class="px-4 py-2 bg-my-pink-400 text-my-white rounded hover:bg-my-pink-600 transition"
+            >
+              Delete Team
+            </button>
+          </div>
+        </div>
+      </div>
+      <button
+        @click="navigateHome"
+        class="mt-8 w-full py-2 px-4 bg-gradient-to-r from-my-pink-400 to-my-yellow-400 text-my-white font-semibold rounded-lg shadow-md hover:from-my-pink-600 hover:to-my-yellow-600 transition"
+      >
+        Menu principale
+      </button>
+    </div>
+  </div>
 </template>

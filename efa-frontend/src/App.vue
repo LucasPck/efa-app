@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import router from '@/router';
 import { useAuthStore } from '@/stores/auth';
+import { useRoute } from 'vue-router';
 
 const store = useAuthStore();
-
-const isConnected = ref();
-
+const isConnected = ref(false);
 const user = ref(null);
 
 async function isLoggedIn() {
@@ -55,31 +54,49 @@ function copyUserTag() {
   }
 }
 
-store.$subscribe( (mutation, state) => {
+store.$subscribe((mutation, state) => {
   isConnected.value = !!state.token;
+  if (state.token) {
+    fetchUserData()
+  }
 })
 
 onMounted(() => {
   isLoggedIn();
 });
-
 </script>
 
 <template>
-  <header>
-    <nav  v-if="isConnected">
-      <RouterLink to="/">Menu principale</RouterLink>
-      <RouterLink to="/team">Équipes</RouterLink>
-    </nav>
-    <nav>
-      <button v-if="isConnected" @click="copyUserTag">Récupérer mon id</button>
-      <button v-if="isConnected" @click="handleLogout">Déconnexion</button>
-      <RouterLink to="/login" v-if="!isConnected" >Connexion</RouterLink>
-    </nav>
-  </header>
-  <RouterView/>
+  <div class="min-h-screen bg-my-black">
+    <header class="bg-my-grey-800 shadow-lg">
+      <nav v-if="isConnected" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+          <RouterLink v-if="isConnected" to="/" class="text-my-white hover:text-pink-500 transition">Menu principal</RouterLink>
+          <RouterLink v-if="isConnected" to="/team" class="text-my-white hover:text-pink-500 transition">Équipes</RouterLink>
+        </div>
+        <div class="flex items-center space-x-4">
+          <button v-if="isConnected" @click="copyUserTag" class="bg-my-grey-600 text-my-white px-4 py-2 rounded hover:bg-gray-600 transition">
+            Récupérer mon id
+          </button>
+          <button v-if="isConnected" @click="handleLogout" class="bg-my-pink-400 text-my-white px-4 py-2 rounded hover:bg-my-pink-600 transition">
+            Déconnexion
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <RouterView />
+    </main>
+  </div>
 </template>
 
 <style>
-/* Votre style ici */
+body {
+  @apply bg-my-black text-my-white;
+}
+
+.router-link-active {
+  @apply text-pink-500;
+}
 </style>
