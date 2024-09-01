@@ -145,7 +145,9 @@ function handleSubmitTournament() {
 async function addTeamToTournament() {
   if (!selectedTournament.value || !teamToAdd.value) return;
 
-  console.log(teamsInTournament.value.teams)
+  if (tournament.teams.length >= parseInt(tournament.number)) {
+    throw new Error("Le nombre maximum d'équipes pour ce tournoi a été atteint");
+  }
 
   try {
     const response = await fetch(`http://localhost:3000/tournament/${selectedTournament.value.id}/addTeam`, {
@@ -321,8 +323,6 @@ async function updateMatchResult(matchId: string, winnerId: string) {
           <p v-if="selectedTournament.stage === 'FINISHED'" class="text-my-white mb-4">
             Winner: {{ selectedTournament.winner.name }}
           </p>
-
-          <!-- Add tournament matches display here -->
         </div>
       </div>
     </div>
