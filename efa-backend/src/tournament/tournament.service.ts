@@ -4,8 +4,7 @@ import { CreateTournamentDto } from './dto/create-tournament-dto';
 
 @Injectable()
 export class TournamentService {
-  constructor(private readonly prisma: PrismaService) {
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   async getTournaments() {
     return this.prisma.tournament.findMany({
@@ -13,7 +12,7 @@ export class TournamentService {
         id: true,
         name: true,
         mode: true,
-        stage: false,
+        stage: true,
       },
     });
   }
@@ -25,8 +24,14 @@ export class TournamentService {
       },
       select: {
         id: true,
-        teams: true,
+        teams: {
+          select: {
+            team: true
+          }
+        },
         mode: true,
+        stage: true,
+        matches: true,
       },
     });
 
@@ -38,7 +43,7 @@ export class TournamentService {
   }
 
   async registerTournament(createTournamentDto: CreateTournamentDto) {
-    const { name, mode, number, team, stage } = createTournamentDto;
+    const { name, mode, number, team } = createTournamentDto;
 
     const [teamName, teamIdSuffix] = team.split('#');
     if (!teamName || !teamIdSuffix) {
@@ -63,7 +68,7 @@ export class TournamentService {
         name,
         mode,
         number,
-        stage: stage || 'NOT_STARTED'
+        stage: 'NOT_STARTED'
       }
     });
 
@@ -96,7 +101,8 @@ export class TournamentService {
         id: true,
         name: true,
         mode: true,
-        number: true
+        number: true,
+        stage: true
       }
     });
   }
@@ -129,6 +135,10 @@ export class TournamentService {
 
     if (!tournament) {
       throw new NotFoundException("Tournoi non trouvé");
+    }
+
+    if (tournament.teams.length >= parseInt(tournament.number)) {
+      throw new ConflictException("Le nombre maximum d'équipes pour ce tournoi a été atteint");
     }
 
     const isTeamAlreadyRegistered = tournament.teams.some(t => t.teamId === existingTeam.id);
@@ -192,14 +202,11 @@ export class TournamentService {
         throw new BadRequestException('Valeur de "mode" invalide');
     }
 
-    // Organiser les matchs
     const teams = tournament.teams.map(t => t.teamId);
     const matches = this.organizeMatches(teams);
 
-    // Sauvegarder les matchs dans la base de données
     await this.saveMatches(tournamentId, matches, stage);
 
-    // Mettre à jour le statut du tournoi
     await this.prisma.tournament.update({
       where: { id: tournamentId },
       data: { stage: 'IN_PROGRESS' }
@@ -218,7 +225,6 @@ export class TournamentService {
   }
 
   private async saveMatches(tournamentId: string, matches: [string, string][], stage: string) {
-    // Assurez-vous d'avoir un modèle Match dans votre schéma Prisma
     for (const [team1, team2] of matches) {
       await this.prisma.match.create({
         data: {
@@ -229,6 +235,62 @@ export class TournamentService {
           status: 'PENDING'
         }
       });
+    }
+  }
+
+  async updateMatchResult(tournamentId: string, matchId: string, winnerId: string) {
+    const match = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      include: { tournament: true }
+    });
+
+    if (!match || match.tournamentId !== tournamentId) {
+      throw new NotFoundException("Match non trouvé");
+    }
+
+    if (match.status !== 'PENDING') {
+      throw new ConflictException("Le résultat de ce match a déjà été enregistré");
+    }
+
+    if (winnerId !== match.team1Id && winnerId !== match.team2Id) {
+      throw new BadRequestException("L'ID de l'équipe gagnante est invalide");
+    }
+
+    await this.prisma.match.update({
+      where: { id: matchId },
+      data: { winnerId, status: 'COMPLETED' }
+    });
+
+    await this.progressTournament(tournamentId);
+
+    return { message: "Résultat du match mis à jour avec succès" };
+  }
+
+  private async progressTournament(tournamentId: string) {
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: { matches: true }
+    });
+
+    if (!tournament) {
+      throw new NotFoundException("Tournoi non trouvé");
+    }
+
+    const pendingMatches = tournament.matches.filter(match => match.status === 'PENDING');
+
+    if (pendingMatches.length === 0) {
+      const completedMatches = tournament.matches.filter(match => match.status === 'COMPLETED');
+      const winners = completedMatches.map(match => match.winnerId);
+
+      if (winners.length === 1) {
+        await this.prisma.tournament.update({
+          where: { id: tournamentId },
+          data: { stage: 'FINISHED', winnerId: winners[0] }
+        });
+      } else {
+        const nextMatches = this.organizeMatches(winners);
+        await this.saveMatches(tournamentId, nextMatches, tournament.mode);
+      }
     }
   }
 }

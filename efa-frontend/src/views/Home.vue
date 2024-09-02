@@ -14,7 +14,7 @@ const support = ref('');
 const tournamentName = ref('');
 const mode = ref('');
 const number = ref('');
-const team = ref('')
+const team = ref('');
 
 const userTournaments = ref([]);
 const selectedTournament = ref(null);
@@ -31,16 +31,16 @@ async function fetchUserTournaments() {
     });
     if (response.ok) {
       userTournaments.value = await response.json();
-      console.log('Tournois récupérés:', userTournaments.value);
+      console.log('Tournaments retrieved:', userTournaments.value);
     } else {
-      console.error('Erreur lors de la récupération des tournois:', await response.text());
+      console.error('Error retrieving tournaments:', await response.text());
     }
   } catch (error) {
-    console.error('Erreur lors de la récupération des tournois:', error);
+    console.error('Error retrieving tournaments:', error);
   }
 }
 
-async function fetchTeamsInTournament(tournamentId: string) {
+async function fetchTournamentDetails(tournamentId: string) {
   if (!tournamentId) return;
   try {
     const response = await fetch(`http://localhost:3000/tournament/${tournamentId}`, {
@@ -50,131 +50,141 @@ async function fetchTeamsInTournament(tournamentId: string) {
     });
     if (response.ok) {
       const tournamentData = await response.json();
+      selectedTournament.value = tournamentData;
       teamsInTournament.value = tournamentData.teams || [];
-      console.log('Équipes récupérées:', teamsInTournament.value);
+      tournamentMatches.value = tournamentData.matches || [];
+      console.log('Tournament details retrieved:', tournamentData);
     } else {
-      console.error('Erreur lors de la récupération des équipes du tournoi:', await response.text());
+      console.error('Error retrieving tournament details:', await response.text());
     }
   } catch (error) {
-    console.error('Erreur lors de la récupération des équipes:', error);
-  }
-}
-
-async function fetchTournamentMatches(tournamentId: string) {
-  if (!tournamentId) return;
-  try {
-    const response = await fetch(`http://localhost:3000/tournament/${tournamentId}/matches`, {
-      headers: {
-        'Authorization': `Bearer ${store.token}`
-      }
-    });
-    if (response.ok) {
-      tournamentMatches.value = await response.json();
-      console.log('Matchs récupérés:', tournamentMatches.value);
-    } else {
-      console.error('Erreur lors de la récupération des matchs:', await response.text());
-    }
-  } catch (error) {
-    console.error('Erreur lors de la récupération des matchs:', error);
+    console.error('Error retrieving tournament details:', error);
   }
 }
 
 watch(() => selectedTournament.value, (newTournament) => {
   if (newTournament) {
-    fetchTeamsInTournament(newTournament.id);
-    fetchTournamentMatches(newTournament.id);
+    fetchTournamentDetails(newTournament.id);
   } else {
     teamsInTournament.value = [];
     tournamentMatches.value = [];
   }
 });
 
-let intervalId: number | null = null;
+  let intervalId: number | null = null;
 
-onMounted(() => {
-  fetchUserTournaments();
-  intervalId = setInterval(fetchUserTournaments, 5000);
-});
+  onMounted(() => {
+    fetchUserTournaments();
+    intervalId = setInterval(fetchUserTournaments, 5000);
+  });
 
-onUnmounted(() => {
-  if (intervalId !== null) {
-    clearInterval(intervalId);
-  }
-});
+  onUnmounted(() => {
+    if (intervalId !== null) {
+      clearInterval(intervalId);
+    }
+  });
 
-function handleSubmitTeam() {
-  fetch('http://localhost:3000/team/createTeam', {
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    method: "POST",
-    body: JSON.stringify({
-      name: teamName.value,
-      toplaner: toplaner.value,
-      jungler: jungler.value,
-      midlaner: midlaner.value,
-      botlaner: botlaner.value,
-      support: support.value,
-    })
-  })
-    .then((response) => {
-      return response.json()
-    })
+function getTeamName(teamId: string) {
+  const team = teamsInTournament.value.find(t => t.teamId === teamId);
+  return team ? team.team.name : 'Équipe inconnue';
 }
 
-function handleSubmitTournament() {
-  fetch('http://localhost:3000/tournament/createTournament', {
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    method: "POST",
-    body: JSON.stringify({
-      name: tournamentName.value,
-      mode: mode.value,
-      number: number.value,
-      team: team.value,
-    })
-  })
-    .then((response) => {
-      return response.json()
-    })
-}
-
-async function addTeamToTournament() {
-  if (!selectedTournament.value || !teamToAdd.value) return;
-
-  if (tournament.teams.length >= parseInt(tournament.number)) {
-    throw new Error("Le nombre maximum d'équipes pour ce tournoi a été atteint");
-  }
-
-  try {
-    const response = await fetch(`http://localhost:3000/tournament/${selectedTournament.value.id}/addTeam`, {
-      method: 'POST',
+  function handleSubmitTeam() {
+    fetch('http://localhost:3000/team/createTeam', {
       headers: {
-        'Content-Type': 'application/json',
+        Accept: "application/json",
+        "Content-Type": "application/json",
         'Authorization': `Bearer ${store.token}`
       },
-      body: JSON.stringify({ teamTag: teamToAdd.value })
-    });
-
-    if (response.ok) {
-      console.log('Équipe ajoutée avec succès');
-      fetchTeamsInTournament(selectedTournament.value.id);
-      teamToAdd.value = '';
-    } else {
-      console.error('Erreur lors de l\'ajout de l\'équipe:', await response.text());
-    }
-  } catch (error) {
-    console.error('Erreur lors de l\'ajout de l\'équipe:', error);
+      method: "POST",
+      body: JSON.stringify({
+        name: teamName.value,
+        toplaner: toplaner.value,
+        jungler: jungler.value,
+        midlaner: midlaner.value,
+        botlaner: botlaner.value,
+        support: support.value,
+      })
+    })
+      .then((response) => {
+        return response.json()
+      })
+      .then(() => {
+        teamName.value = '';
+        toplaner.value = '';
+        jungler.value = '';
+        midlaner.value = '';
+        botlaner.value = '';
+        support.value = '';
+      })
+      .catch((error) => {
+        console.error('Error creating team:', error);
+      });
   }
-}
+
+  function handleSubmitTournament() {
+    fetch('http://localhost:3000/tournament/createTournament', {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        'Authorization': `Bearer ${store.token}`
+      },
+      method: "POST",
+      body: JSON.stringify({
+        name: tournamentName.value,
+        mode: mode.value,
+        number: number.value,
+        team: team.value,
+      })
+    })
+      .then((response) => {
+        return response.json()
+      })
+      .then(() => {
+        tournamentName.value = '';
+        mode.value = '';
+        number.value = '';
+        team.value = '';
+        fetchUserTournaments();
+      })
+      .catch((error) => {
+        console.error('Error creating tournament:', error);
+      });
+  }
+
+  async function addTeamToTournament() {
+    if (!selectedTournament.value || !teamToAdd.value) return;
+
+    try {
+      const response = await fetch(`http://localhost:3000/tournament/${selectedTournament.value.id}/addTeam`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${store.token}`
+        },
+        body: JSON.stringify({ teamTag: teamToAdd.value })
+      });
+
+      if (response.ok) {
+        console.log('Équipe ajoutée avec succès');
+        fetchTournamentDetails(selectedTournament.value.id);
+        teamToAdd.value = '';
+      } else {
+        console.error('Erreur lors de l\'ajout de l\'équipe:', await response.text());
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de l\'équipe:', error);
+    }
+  }
 
 async function startTournament() {
-  if (!selectedTournament.value) return;
+  if (!selectedTournament.value) {
+    console.error("Aucun tournoi sélectionné");
+    return;
+  }
 
   try {
+    console.log("Démarrage du tournoi:", selectedTournament.value);
     const response = await fetch(`http://localhost:3000/tournament/${selectedTournament.value.id}/start`, {
       method: 'POST',
       headers: {
@@ -182,43 +192,49 @@ async function startTournament() {
         'Authorization': `Bearer ${store.token}`
       },
       body: JSON.stringify({
-        mode: selectedTournament.value.mode,
-        number: selectedTournament.value.number
+        mode: 'BO1',
+        number: '8'
       })
     });
+    console.log("Number value:", selectedTournament.value);
 
     if (response.ok) {
-      console.log('Tournoi démarré avec succès');
-      fetchTournamentMatches(selectedTournament.value.id);
+      const result = await response.json();
+      console.log('Tournoi démarré avec succès:', result);
+      await fetchTournamentDetails(selectedTournament.value.id);
     } else {
-      console.error('Erreur lors du démarrage du tournoi:', await response.text());
+      const errorText = await response.text();
+      console.error('Erreur lors du démarrage du tournoi:', errorText);
     }
   } catch (error) {
     console.error('Erreur lors du démarrage du tournoi:', error);
   }
 }
 
-async function updateMatchResult(matchId: string, winnerId: string) {
-  try {
-    const response = await fetch(`http://localhost:3000/tournament/${selectedTournament.value.id}/match/${matchId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${store.token}`
-      },
-      body: JSON.stringify({ winnerId })
-    });
+  async function updateMatchResult(matchId: string, winnerId: string) {
+    if (!selectedTournament.value) return;
 
-    if (response.ok) {
-      console.log('Résultat du match mis à jour');
-      fetchTournamentMatches(selectedTournament.value.id);
-    } else {
-      console.error('Erreur lors de la mise à jour du résultat:', await response.text());
+    try {
+      const response = await fetch(`http://localhost:3000/tournament/${selectedTournament.value.id}/match/${matchId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${store.token}`
+        },
+        body: JSON.stringify({ winnerId })
+      });
+
+      if (response.ok) {
+        console.log('Résultat du match mis à jour');
+        fetchTournamentDetails(selectedTournament.value.id);
+      } else {
+        console.error('Erreur lors de la mise à jour du résultat:', await response.text());
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du résultat:', error);
     }
-  } catch (error) {
-    console.error('Erreur lors de la mise à jour du résultat:', error);
   }
-}
+
 </script>
 
 <template>
@@ -231,10 +247,10 @@ async function updateMatchResult(matchId: string, winnerId: string) {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="bg-my-grey-800 rounded-lg shadow-lg p-6">
           <h2 class="text-2xl font-semibold text-my-white mb-4">Créer une équipe</h2>
-          <form @submit="handleSubmitTeam">
+          <form @submit.prevent="handleSubmitTeam">
             <input
               type="text"
-              placeholder="Team Name"
+              placeholder="Nom de l'équipe"
               v-model="teamName"
               class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded"
             />
@@ -243,7 +259,7 @@ async function updateMatchResult(matchId: string, winnerId: string) {
             <input type="text" placeholder="Midlaner" v-model="midlaner" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
             <input type="text" placeholder="Botlaner" v-model="botlaner" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
             <input type="text" placeholder="Support" v-model="support" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
-            <button type="submit" class="w-full py-2 px-4 bg-my-blue-400 text-my-black rounded hover:bg-my-my-blue-600 transition">
+            <button type="submit" class="w-full py-2 px-4 bg-my-blue-400 text-my-black rounded hover:bg-my-blue-600 transition">
               Créer l'équipe
             </button>
           </form>
@@ -251,23 +267,23 @@ async function updateMatchResult(matchId: string, winnerId: string) {
 
         <div class="bg-my-grey-800 rounded-lg shadow-lg p-6">
           <h2 class="text-2xl font-semibold text-my-white mb-4">
-            Créer un tournois
+            Créer un tournoi
           </h2>
-          <form @submit="handleSubmitTournament">
+          <form @submit.prevent="handleSubmitTournament">
             <input
               type="text"
-              placeholder="Tournament Name"
+              placeholder="Nom du tournois"
               v-model="tournamentName"
               class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded"
             />
             <select v-model="number" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
-              <option value="">Select number of teams</option>
+              <option value="">Choisir le nombre de participant</option>
               <option value="4">4</option>
               <option value="8">8</option>
               <option value="16">16</option>
             </select>
             <select v-model="mode" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
-              <option value="">Select mode</option>
+              <option value="">Choisir un mode</option>
               <option value="BO1">BO1</option>
               <option value="BO3">BO3</option>
               <option value="BO5">BO5</option>
@@ -278,24 +294,32 @@ async function updateMatchResult(matchId: string, winnerId: string) {
               v-model="team"
               class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded"
             />
-            <button type="submit" class="w-full py-2 px-4 bg-my-blue-400 text-my-black rounded hover:bg-my-my-blue-600 transition">
-              Créer le tournois
+            <button type="submit" class="w-full py-2 px-4 bg-my-blue-400 text-my-black rounded hover:bg-my-blue-600 transition">
+              Créer le tournoi
             </button>
           </form>
         </div>
       </div>
 
       <div class="mt-8 bg-my-grey-800 rounded-lg shadow-lg p-6">
-        <h2 class="text-2xl font-semibold text-my-white mb-4">Tournaments</h2>
-        <select v-model="selectedTournament" class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded">
-          <option value="">Select a tournament</option>
+        <h2 class="text-2xl font-semibold text-my-white mb-4">Tournois</h2>
+        <select
+          v-model="selectedTournament"
+          class="w-full p-2 mb-4 bg-my-grey-600 text-my-white rounded"
+          @change="fetchTournamentDetails(selectedTournament.id)"
+        >
+          <option :value="null">Sélectionner un tournoi</option>
           <option v-for="tournament in userTournaments" :key="tournament.id" :value="tournament">
             {{ tournament.name }}
           </option>
         </select>
 
         <div v-if="selectedTournament">
-          <form @submit="addTeamToTournament" class="mb-4">
+          <div class="mb-4">
+            <h3 class="font-bold text-my-white">Statut du tournoi : {{ selectedTournament.stage }}</h3>
+          </div>
+
+          <form v-if="selectedTournament.stage === 'NOT_STARTED'" @submit.prevent="addTeamToTournament" class="mb-4">
             <input
               type="text"
               placeholder="Team Code"
@@ -306,23 +330,45 @@ async function updateMatchResult(matchId: string, winnerId: string) {
               Ajouter une équipe
             </button>
           </form>
-          <div>
-            <h3 class="font-bold">Équipes inscrites :</h3>
-            <ul v-if="teamsInTournament.length > 0">
-              <li v-for="team in teamsInTournament" :key="team.teamId">
-                {{ team.team?.name || 'Nom d\'équipe inconnu' }}
+
+          <div class="mb-4">
+            <h3 class="font-bold text-my-white">Équipes inscrites :</h3>
+            <ul v-if="teamsInTournament.length > 0" class="list-disc pl-5 text-my-white">
+              <li v-for="teamEntry in teamsInTournament" :key="teamEntry.teamId">
+                {{ teamEntry.team?.name || 'Nom d\'équipe inconnu' }}
               </li>
             </ul>
-            <p v-else>Aucune équipe inscrite pour le moment</p>
+            <p v-else class="text-my-white">Aucune équipe inscrite pour le moment</p>
           </div>
 
-          <button v-if="selectedTournament.stage === 'IN_PROGRESS'" @click="startTournament" class="w-full py-2 px-4 bg-my-pink-400 text-my-white rounded hover:bg-my-pink-600 transition mb-4">
-            Start Tournament
+          <button
+            v-if="selectedTournament?.stage === 'NOT_STARTED'"
+            @click="startTournament"
+            class="w-full py-2 px-4 bg-my-pink-400 text-my-white rounded hover:bg-my-pink-600 transition mb-4"
+          >
+            Démarrer le tournoi
           </button>
 
-          <p v-if="selectedTournament.stage === 'FINISHED'" class="text-my-white mb-4">
-            Winner: {{ selectedTournament.winner.name }}
-          </p>
+          <div v-if="selectedTournament.stage === 'IN_PROGRESS'" class="mb-4">
+            <h3 class="font-bold text-my-white mb-2">Matchs en cours :</h3>
+            <div v-for="match in tournamentMatches" :key="match.id" class="bg-my-grey-700 p-3 rounded mb-2">
+              <p class="text-my-white">{{ getTeamName(match.team1Id) }} vs {{ getTeamName(match.team2Id) }}</p>
+              <p class="text-my-white">Statut : {{ match.status }}</p>
+              <div v-if="match.status === 'PENDING'" class="mt-2">
+                <button @click="updateMatchResult(match.id, match.team1Id)" class="mr-2 px-3 py-1 bg-my-blue-400 text-my-white rounded hover:bg-my-blue-600 transition">
+                  {{ getTeamName(match.team1Id) }} Gagne
+                </button>
+                <button @click="updateMatchResult(match.id, match.team2Id)" class="px-3 py-1 bg-my-blue-400 text-my-white rounded hover:bg-my-blue-600 transition">
+                  {{ getTeamName(match.team2Id) }} Gagne
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="selectedTournament.stage === 'FINISHED'" class="mb-4">
+            <h3 class="font-bold text-my-white mb-2">Résultat final :</h3>
+            <p class="text-my-white">Vainqueur : {{ selectedTournament.winner?.name || 'Nom d\'équipe inconnu' }}</p>
+          </div>
         </div>
       </div>
     </div>

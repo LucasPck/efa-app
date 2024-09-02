@@ -1,4 +1,4 @@
-import { IsString, MinLength, Matches, IsNotEmpty } from 'class-validator';
+import { IsString, MinLength, Matches, IsNotEmpty, IsIn } from 'class-validator';
 
 export class CreateTournamentDto {
   @IsString({ message: "Entrez le nom du tournoi" })
@@ -11,13 +11,11 @@ export class CreateTournamentDto {
 
   @IsNotEmpty()
   @IsString({ message: "Entrez le nombre de participants" })
+  @IsIn(['4', '8', '16'])
   number: string;
 
   @IsNotEmpty()
   @IsString({ message: "Entrez l'équipe au format nom_équipe#XXXXX" })
   @Matches(/^.+#[A-Za-z0-9]{5}$/, { message: "Le format de l'équipe doit être nom_équipe#XXXXX" })
   team: string;
-
-  @IsString()
-  stage: string;
 }

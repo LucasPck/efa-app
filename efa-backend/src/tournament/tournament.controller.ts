@@ -1,40 +1,24 @@
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Put } from '@nestjs/common';
 import { CreateTournamentDto } from './dto/create-tournament-dto';
 import { TournamentService } from './tournament.service';
 
-export type CreateTournament = {
-  name:      string;
-  mode:      string;
-  number:    string;
-  team:      string;
-  stage?:     string;
-};
-
 @Controller('tournament')
 export class TournamentController {
-  constructor(private readonly tournamentService: TournamentService) {
-  }
+  constructor(private readonly tournamentService: TournamentService) {}
 
-  //localhost:3000/tournaments/settings
   @Get('settings')
   getTournaments() {
     return this.tournamentService.getTournaments();
   }
 
-  @Get('/:tournamentId')
-  // localhost:3000/tournaments/3000
+  @Get(':tournamentId')
   getTournament(@Param('tournamentId') tournamentId: string) {
-    return this.tournamentService.getTournament({
-      tournamentId,
-    });
+    return this.tournamentService.getTournament({ tournamentId });
   }
 
-  //localhost:3000/tournament/createTournament
   @Post('createTournament')
   async registerTournament(@Body() createTournamentDto: CreateTournamentDto) {
-    return await this.tournamentService.registerTournament(
-      createTournamentDto
-    );
+    return await this.tournamentService.registerTournament(createTournamentDto);
   }
 
   @Post(':tournamentId/addTeam')
@@ -52,5 +36,14 @@ export class TournamentController {
     @Body('number') number: string
   ) {
     return this.tournamentService.manageTournament(tournamentId, mode, number);
+  }
+
+  @Put(':tournamentId/match/:matchId')
+  async updateMatchResult(
+    @Param('tournamentId') tournamentId: string,
+    @Param('matchId') matchId: string,
+    @Body('winnerId') winnerId: string
+  ) {
+    return this.tournamentService.updateMatchResult(tournamentId, matchId, winnerId);
   }
 }

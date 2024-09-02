@@ -1,25 +1,32 @@
-/**
- * ! Executing this script will delete all data in your database and seed it with 10 users.
- * ! Make sure to adjust the script to your needs.
- * Use any TypeScript runner to run this script, for example: `npx tsx seed.ts`
- * Learn more about the Seed Client by following our guide: https://docs.snaplet.dev/seed/getting-started
- */
-import { createSeedClient } from "@snaplet/seed";
+import { PrismaClient } from '@prisma/client'
+import { faker } from '@faker-js/faker/locale/fr';
+import { hash } from 'bcrypt';
 
-const main = async () => {
-  const seed = await createSeedClient();
+function user (index: number) {
+  return {email: `user.${index}@user.com`, nametag: faker.internet.userName(), password: "password"}
+}
 
-  // Truncate all tables in the database
-  await seed.$resetDatabase();
-
-  // Seed the database with 10 users
-  await seed.users((x) => x(10));
-
-  // Type completion not working? You might want to reload your TypeScript Server to pick up the changes
-
-  console.log("Database seeded successfully!");
-
-  process.exit();
-};
-
-main();
+const prisma = new PrismaClient()
+async function main() {
+  for (let i = 0 ; i < 80 ; i++) {
+    const u = user(i)
+    await prisma.user.upsert({
+      where: { email: u.email },
+      update: {},
+      create: {
+        email: u.email,
+        nametag: u.nametag,
+        password: await hash(u.password, 10)
+      },
+    })
+  }
+}
+main()
+  .then(async () => {
+    await prisma.$disconnect()
+  })
+  .catch(async (e) => {
+    console.error(e)
+    await prisma.$disconnect()
+    process.exit(1)
+  })
